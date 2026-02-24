@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MLBB Edu-Adventure AI - 20 Questions Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Oswald:wght@400;700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ml-gold: #c9a45c;
+            --ml-gold-dark: #8a6d3b;
+            --ml-cyan: #00ffcc;
+            --ml-red: #ff4d4d;
+            --ml-green: #2ecc71;
+        }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Roboto', sans-serif;
+            background-color: #050a14;
+            color: white;
+            touch-action: manipulation;
+        }
+
+        .ml-font { font-family: 'Cinzel', serif; }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background-image: url('https://i.imgur.com/I3baqyw.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4); 
+            padding: 1rem;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+
+        .hidden { display: none !important; }
+
+        .btn-ml {
+            background: linear-gradient(to bottom, var(--ml-gold), var(--ml-gold-dark));
+            border: 2px solid #fff;
+            padding: 12px 20px;
+            color: #fff;
+            text-transform: uppercase;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%);
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 0.9rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+        }
+
+        .btn-ml:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-ml:active:not(:disabled) { transform: scale(0.95); opacity: 0.9; }
+
+        .btn-secondary {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--ml-gold);
+        }
+
+        .ml-input {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--ml-gold);
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 1.2rem;
+            width: 100%;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 550px;
+        }
+
+        @media (min-width: 640px) {
+            .hero-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .hero-card {
+            background: rgba(10, 15, 25, 0.9);
+            border: 2px solid rgba(201, 164, 92, 0.5);
+            border-radius: 6px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: 0.3s;
+            position: relative;
+        }
+
+        .hero-card.selected { border-color: var(--ml-cyan); box-shadow: 0 0 20px var(--ml-cyan); transform: translateY(-5px); }
+
+        .message-box {
+            background: rgba(5, 10, 20, 0.92);
+            border: 2px solid var(--ml-gold);
+            padding: 1.25rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .btn-correct { 
+            background: linear-gradient(to bottom, #2ecc71, #27ae60) !important; 
+            border-color: #fff !important; 
+        }
+        .btn-wrong { 
+            background: linear-gradient(to bottom, #e74c3c, #c0392b) !important; 
+            border-color: #fff !important; 
+        }
+
+        #music-control {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid var(--ml-gold);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--ml-gold); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="https://github.com/Suci1788/musikku/raw/refs/heads/main/Ascension_of_the_Valiant.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="music-control" onclick="toggleMusic()">
+        <span id="music-icon">🎵</span>
+    </div>
+
+    <div id="game-container">
+        <!-- Main Menu -->
+        <div id="start-menu" class="screen">
+            <h1 class="ml-font text-6xl sm:text-8xl text-white mb-2 text-center">MLBB EDU</h1>
+            <p class="text-yellow-400 mb-10 tracking-[0.4em] font-bold text-sm sm:text-lg text-center uppercase">Battle of Intelligence</p>
+            <div class="flex flex-col gap-4 w-full max-w-[320px]">
+                <button onclick="showNameInput()" class="btn-ml text-xl">Mulai Battle</button>
+                <button onclick="showLeaderboard()" class="btn-ml btn-secondary">Leaderboard</button>
+            </div>
+        </div>
+
+        <!-- Name Input -->
+        <div id="name-screen" class="screen hidden">
+            <div class="message-box w-full max-w-[320px]">
+                <h2 class="ml-font text-2xl text-yellow-400 mb-6 text-center uppercase">Identitas Player</h2>
+                <input type="text" id="player-name-input" class="ml-input mb-6" placeholder="Masukkan Nama..." maxlength="12">
+                <div class="flex flex-col gap-3">
+                    <button onclick="confirmName()" class="btn-ml w-full">Konfirmasi</button>
+                    <button onclick="backToMenu()" class="btn-ml btn-secondary w-full">Kembali</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level Selection -->
+        <div id="level-screen" class="screen hidden">
+            <h2 class="ml-font text-2xl text-yellow-400 mb-8 tracking-widest uppercase text-center">Pilih Jenjang Sekolah</h2>
+            <div class="flex flex-col gap-4 w-full max-w-[280px]">
+                <button onclick="selectLevel('SD')" class="btn-ml">Sekolah Dasar (SD)</button>
+                <button onclick="selectLevel('SMP')" class="btn-ml">Menengah Pertama (SMP)</button>
+                <button onclick="selectLevel('SMA')" class="btn-ml">Menengah Atas (SMA)</button>
+            </div>
+            <button onclick="switchScreen('level-screen', 'name-screen')" class="btn-ml btn-secondary mt-10 w-full max-w-[280px]">Kembali</button>
+        </div>
+
+        <!-- Hero Selection -->
+        <div id="hero-screen" class="screen hidden">
+            <h2 class="ml-font text-2xl text-yellow-400 mb-2 tracking-widest uppercase text-center">Pilih Role Battle</h2>
+            <p class="text-xs text-gray-400 mb-6 uppercase font-bold" id="level-tag-display"></p>
+            <div class="hero-grid custom-scrollbar overflow-y-auto max-h-[60vh] pr-2" id="hero-list"></div>
+            <div class="flex gap-4 mt-8 w-full max-w-[400px]">
+                <button onclick="switchScreen('hero-screen', 'level-screen')" class="btn-ml btn-secondary flex-1">Kembali</button>
+                <button id="hero-confirm-btn" onclick="showDifficulty()" class="btn-ml flex-1 hidden">Lanjut</button>
+            </div>
+        </div>
+
+        <!-- Difficulty Selection -->
+        <div id="difficulty-screen" class="screen hidden">
+            <h2 class="ml-font text-2xl text-yellow-400 mb-8 tracking-widest uppercase">Pilih Rank Battle</h2>
+            <div class="flex flex-col gap-4 w-full max-w-[280px]">
+                <button onclick="selectDiff('mudah', this)" class="btn-ml btn-secondary">Warrior (Mudah)</button>
+                <button onclick="selectDiff('sedang', this)" class="btn-ml btn-secondary">Epic (Sedang)</button>
+                <button onclick="selectDiff('sukar', this)" class="btn-ml btn-secondary">Mythic (Sukar)</button>
+            </div>
+            <div class="flex gap-4 mt-10 w-full max-w-[350px]">
+                <button onclick="switchScreen('difficulty-screen', 'hero-screen')" class="btn-ml btn-secondary flex-1">Kembali</button>
+                <button id="diff-confirm-btn" onclick="prepareGame()" class="btn-ml flex-1 hidden">Gas Pol!</button>
+            </div>
+        </div>
+
+        <!-- Battle Arena -->
+        <div id="arena" class="screen hidden !items-stretch !justify-start sm:!justify-center overflow-y-auto">
+            <div class="flex flex-col md:flex-row gap-8 p-4 max-w-6xl w-full">
+                <div class="flex-1">
+                    <div class="flex justify-between items-end mb-3">
+                        <div>
+                            <p id="player-tag" class="text-[12px] text-white font-bold mb-1"></p>
+                            <p id="info-header" class="text-[12px] text-yellow-400 font-bold uppercase tracking-widest"></p>
+                        </div>
+                        <div id="lives-header" class="text-3xl"></div>
+                    </div>
+                    <div class="message-box mb-6">
+                        <div class="w-full bg-gray-900 h-2 rounded-full overflow-hidden mb-4 border border-white/10">
+                            <div id="timer-progress" class="bg-cyan-400 h-full w-full transition-all duration-100"></div>
+                        </div>
+                        <p id="question-text" class="text-xl sm:text-2xl font-bold text-center leading-relaxed"></p>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <div id="options-container" class="grid grid-cols-1 gap-3"></div>
+                    <div class="mt-8 flex justify-between items-center bg-black/60 p-5 rounded-xl border border-white/10">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-gray-400 uppercase font-bold">Battle Points</span>
+                            <span id="score-display" class="text-4xl text-white font-bold ml-font">0</span>
+                        </div>
+                        <button onclick="quitGame()" class="text-[10px] text-red-400 uppercase font-bold hover:underline">Recall</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboard-screen" class="screen hidden">
+            <div class="message-box w-full max-w-sm">
+                <h2 class="ml-font text-3xl text-center text-yellow-500 mb-6">TOP LEGENDS</h2>
+                <div id="leaderboard-content" class="leaderboard-list mb-8 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar"></div>
+                <button onclick="backToMenu()" class="btn-ml w-full">Kembali</button>
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over" class="screen hidden">
+            <div class="message-box w-full max-w-xs text-center">
+                <h2 id="result-status" class="ml-font text-5xl mb-4 italic">VICTORY</h2>
+                <p class="text-xl mb-1 text-gray-400 uppercase">Skor Battle</p>
+                <p id="final-score" class="text-6xl text-yellow-500 font-bold mb-8 ml-font">0</p>
+                <div class="flex flex-col gap-4">
+                    <button onclick="prepareGame()" class="btn-ml text-lg">Main Lagi</button>
+                    <button onclick="backToMenu()" class="btn-ml btn-secondary">Menu Utama</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, getDocs, limit, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mlbb-edu-v4';
+
+        // Bank Soal 20 per Pelajaran per Jenjang
+        const QUESTION_BANK = {
+            SD: {
+                "Matematika": [
+                    {q: "Hasil dari $125 + 75 - 50$ adalah...", a: ["100", "150", "200", "250"], c: 1},
+                    {q: "Bangun datar yang memiliki 4 sisi sama panjang adalah...", a: ["Persegi Panjang", "Segitiga", "Persegi", "Trapesium"], c: 2},
+                    {q: "Bentuk desimal dari $\\frac{1}{2}$ adalah...", a: ["0,2", "0,5", "0,25", "0,75"], c: 1},
+                    {q: "Sudut yang besarnya $90^{\\circ}$ disebut sudut...", a: ["Lancip", "Tumpul", "Siku-siku", "Lurus"], c: 2},
+                    {q: "Hasil dari $8 \\times 7$ adalah...", a: ["48", "54", "56", "62"], c: 2},
+                    {q: "Bilangan prima terkecil adalah...", a: ["0", "1", "2", "3"], c: 2},
+                    {q: "Hasil dari $1.000 - 250$ adalah...", a: ["650", "750", "850", "950"], c: 1},
+                    {q: "Sisi pada kubus berjumlah...", a: ["4", "6", "8", "12"], c: 1},
+                    {q: "Berapa menit dalam 2 jam?", a: ["60", "90", "120", "180"], c: 2},
+                    {q: "Hasil dari $15 + 10 \\times 2$ adalah...", a: ["50", "35", "25", "45"], c: 1},
+                    {q: "Nama lain dari bilangan persepuluhan adalah...", a: ["Desimal", "Persen", "Pecahan", "Bulat"], c: 0},
+                    {q: "Alat untuk mengukur berat adalah...", a: ["Mistar", "Termometer", "Timbangan", "Stopwatch"], c: 2},
+                    {q: "Banyaknya sudut pada segitiga adalah...", a: ["1", "2", "3", "4"], c: 2},
+                    {q: "Hasil dari $49 \\div 7$ adalah...", a: ["6", "7", "8", "9"], c: 1},
+                    {q: "Lambang bilangan Romawi 'X' adalah...", a: ["1", "5", "10", "50"], c: 2},
+                    {q: "Keliling persegi dengan sisi 5 cm adalah...", a: ["10 cm", "20 cm", "25 cm", "15 cm"], c: 1},
+                    {q: "Pecahan senilai dari $\\frac{2}{4}$ adalah...", a: ["$\\frac{1}{2}$", "$\\frac{1}{3}$", "$\\frac{1}{4}$", "$\\frac{2}{3}$"], c: 0},
+                    {q: "Hasil $2^3$ adalah...", a: ["6", "8", "9", "4"], c: 1},
+                    {q: "Ibu membeli 2 kg apel. Berapa gram apel tersebut?", a: ["20 g", "200 g", "2.000 g", "20.000 g"], c: 2},
+                    {q: "Berapa hari dalam 3 minggu?", a: ["14", "21", "28", "30"], c: 1}
+                ],
+                "B. Indonesia": [
+                    {q: "Lawan kata 'rajin' adalah...", a: ["Malas", "Pintar", "Tekun", "Sombong"], c: 0},
+                    {q: "Kalimat perintah diakhiri tanda...", a: ["Titik (.)", "Tanya (?)", "Seru (!)", "Koma (,)"], c: 2},
+                    {q: "Persamaan kata 'melihat' adalah...", a: ["Mendengar", "Memandang", "Meraba", "Mencium"], c: 1},
+                    {q: "Tokoh utama dalam cerita disebut...", a: ["Antagonis", "Protagonis", "Figuran", "Sutradara"], c: 1},
+                    {q: "Huruf kapital digunakan di awal...", a: ["Kalimat", "Kata benda", "Kata sifat", "Kata kerja"], c: 0},
+                    {q: "Tanda baca untuk mengakhiri kalimat tanya adalah...", a: ["!", "?", ".", ","], c: 1},
+                    {q: "Pesan dalam sebuah cerita disebut...", a: ["Alur", "Setting", "Amanat", "Tema"], c: 2},
+                    {q: "Antonim dari kata 'Besar' adalah...", a: ["Luas", "Lebar", "Kecil", "Panjang"], c: 2},
+                    {q: "Sinonim dari kata 'Bahagia' adalah...", a: ["Sedih", "Kecewa", "Senang", "Marah"], c: 2},
+                    {q: "Kata tanya untuk menanyakan tempat adalah...", a: ["Kapan", "Dimana", "Siapa", "Kenapa"], c: 1},
+                    {q: "Pencipta lagu Indonesia Raya adalah...", a: ["Ibu Sud", "Ismail Marzuki", "W.R. Supratman", "C. Simanjuntak"], c: 2},
+                    {q: "Rangkaian peristiwa dalam cerita disebut...", a: ["Latar", "Alur", "Tema", "Amanat"], c: 1},
+                    {q: "Kancil dan Buaya termasuk jenis cerita...", a: ["Mitos", "Legenda", "Fabel", "Hikayat"], c: 2},
+                    {q: "Kalimat yang subjeknya melakukan pekerjaan disebut kalimat...", a: ["Pasif", "Aktif", "Tanya", "Perintah"], c: 1},
+                    {q: "Ringkasan sebuah teks disebut...", a: ["Diksi", "Sinopsis", "Narasi", "Deskripsi"], c: 1},
+                    {q: "Kata dasar dari 'membuang' adalah...", a: ["Muang", "Buang", "Embuang", "Mbuang"], c: 1},
+                    {q: "Buku tempat menulis kegiatan harian disebut...", a: ["Kamus", "Buku harian", "Komik", "Majalah"], c: 1},
+                    {q: "Puisi lama yang bersajak a-b-a-b disebut...", a: ["Pantun", "Gurindam", "Syair", "Karmina"], c: 0},
+                    {q: "Media cetak yang terbit setiap hari disebut...", a: ["Tabloid", "Majalah", "Koran", "Buletin"], c: 2},
+                    {q: "Paragraf yang ide pokoknya di awal disebut...", a: ["Induktif", "Deduktif", "Campuran", "Deskriptif"], c: 1}
+                ],
+                "IPAS": [
+                    {q: "Bagian tumbuhan yang menyerap air adalah...", a: ["Daun", "Batang", "Akar", "Bunga"], c: 2},
+                    {q: "Hewan pemakan daging disebut...", a: ["Herbivora", "Karnivora", "Omnivora", "Insektivora"], c: 1},
+                    {q: "Perubahan air menjadi uap disebut...", a: ["Mencair", "Membeku", "Menguap", "Mengembun"], c: 2},
+                    {q: "Pusat tata surya kita adalah...", a: ["Bumi", "Bulan", "Matahari", "Mars"], c: 2},
+                    {q: "Alat pernapasan ikan adalah...", a: ["Paru-paru", "Insang", "Kulit", "Trakea"], c: 1},
+                    {q: "Sumber energi terbesar di bumi adalah...", a: ["Baterai", "Listrik", "Matahari", "Angin"], c: 2},
+                    {q: "Benda yang ditarik magnet disebut benda...", a: ["Isolator", "Magnetis", "Radiator", "Konduktor"], c: 1},
+                    {q: "Bagian daun yang berwarna hijau mengandung...", a: ["Klorofil", "Oksigen", "Karbon", "Air"], c: 0},
+                    {q: "Proses pembuatan makanan pada tumbuhan disebut...", a: ["Respirasi", "Fotosintesis", "Oksidasi", "Evaporasi"], c: 1},
+                    {q: "Planet merah adalah sebutan untuk planet...", a: ["Venus", "Mars", "Jupiter", "Saturnus"], c: 1},
+                    {q: "Gaya yang menyebabkan benda jatuh ke bawah adalah gaya...", a: ["Magnet", "Otot", "Gravitasi", "Gesek"], c: 2},
+                    {q: "Benda padat menjadi cair disebut...", a: ["Membeku", "Mencair", "Menyublim", "Menguap"], c: 1},
+                    {q: "Bunyi dihasilkan oleh benda yang...", a: ["Diam", "Bergetar", "Panas", "Dingin"], c: 1},
+                    {q: "Tulang yang melindungi otak adalah tulang...", a: ["Rusuk", "Tengkorak", "Belakang", "Leher"], c: 1},
+                    {q: "Pelangi terjadi karena cahaya matahari yang...", a: ["Hilang", "Dibiaskan", "Diserap", "Dipantulkan"], c: 1},
+                    {q: "Hewan yang hidup di air dan darat disebut...", a: ["Reptil", "Amfibi", "Mamalia", "Aves"], c: 1},
+                    {q: "Cermin yang permukaannya rata disebut cermin...", a: ["Cembung", "Cekung", "Datar", "Lensa"], c: 2},
+                    {q: "Energi yang dihasilkan baterai adalah energi...", a: ["Panas", "Gerak", "Kimia", "Cahaya"], c: 2},
+                    {q: "Kumpulan bintang di langit disebut...", a: ["Galaksi", "Planet", "Atmosfer", "Meteor"], c: 0},
+                    {q: "Lapisan udara yang menyelimuti bumi disebut...", a: ["Litosfer", "Atmosfer", "Hidrosfer", "Biosfer"], c: 1}
+                ],
+                "Seni Rupa": [
+                    {q: "Warna primer terdiri dari merah, kuning, dan...", a: ["Hijau", "Biru", "Ungu", "Putih"], c: 1},
+                    {q: "Campuran warna merah dan kuning menghasilkan...", a: ["Oranye", "Hijau", "Ungu", "Cokelat"], c: 0},
+                    {q: "Alat musik petik adalah...", a: ["Seruling", "Drum", "Gitar", "Piano"], c: 2},
+                    {q: "Batik berasal dari negara...", a: ["Malaysia", "Thailand", "Indonesia", "Jepang"], c: 2},
+                    {q: "Lagu 'Gundul-Gundul Pacul' berasal dari...", a: ["Jawa Tengah", "Jawa Barat", "Sumatera", "Papua"], c: 0},
+                    {q: "Patung termasuk karya seni ... dimensi.", a: ["Satu", "Dua", "Tiga", "Empat"], c: 2},
+                    {q: "Warna hijau adalah campuran kuning dan...", a: ["Merah", "Biru", "Putih", "Hitam"], c: 1},
+                    {q: "Tari Piring berasal dari daerah...", a: ["Bali", "Aceh", "Minangkabau", "Betawi"], c: 2},
+                    {q: "Alat musik angklung terbuat dari...", a: ["Kayu", "Besi", "Bambu", "Plastik"], c: 2},
+                    {q: "Seni melipat kertas dari Jepang disebut...", a: ["Ikebana", "Origami", "Sushi", "Kimono"], c: 1},
+                    {q: "Warna netral adalah...", a: ["Merah", "Kuning", "Hitam & Putih", "Hijau"], c: 2},
+                    {q: "Lukisan adalah karya seni ... dimensi.", a: ["1", "2", "3", "4"], c: 1},
+                    {q: "Unsur rupa yang paling dasar adalah...", a: ["Garis", "Titik", "Bidang", "Warna"], c: 1},
+                    {q: "Tarian yang dilakukan secara masal di Aceh adalah...", a: ["Kecak", "Saman", "Piring", "Jaipong"], c: 1},
+                    {q: "Media untuk melukis biasanya menggunakan...", a: ["Kertas", "Kanvas", "Tembok", "Lantai"], c: 1},
+                    {q: "Tekstur yang kasar contohnya adalah...", a: ["Kaca", "Kulit Durian", "Sutra", "Plastik"], c: 1},
+                    {q: "Lagu daerah Maluku yang terkenal adalah...", a: ["Apuse", "Rasa Sayange", "Ampar Pisang", "Soleram"], c: 1},
+                    {q: "Cara memainkan biola adalah dengan cara...", a: ["Dipetik", "Digesek", "Ditiup", "Dipukul"], c: 1},
+                    {q: "Motif hias yang meniru bentuk alam disebut motif...", a: ["Geometris", "Figuratif", "Naturalis", "Abstrak"], c: 2},
+                    {q: "Penyanyi yang menyanyi sendirian disebut...", a: ["Duet", "Trio", "Solo", "Koor"], c: 2}
+                ],
+                "Pendidikan Pancasila": [
+                    {q: "Lambang sila ke-1 Pancasila adalah...", a: ["Rantai", "Bintang", "Pohon Beringin", "Padi Kapas"], c: 1},
+                    {q: "Dasar negara Indonesia adalah...", a: ["UUD 1945", "Pancasila", "Proklamasi", "Bhinneka Tunggal Ika"], c: 1},
+                    {q: "Sila ke-3 berbunyi 'Persatuan ...'", a: ["Rakyat", "Bangsa", "Indonesia", "Wilayah"], c: 2},
+                    {q: "Warna bendera Indonesia adalah...", a: ["Merah Putih", "Putih Merah", "Biru Putih", "Merah Kuning"], c: 0},
+                    {q: "Semboyan bangsa Indonesia adalah...", a: ["Tut Wuri Handayani", "Bhinneka Tunggal Ika", "Ing Ngarsa Sung Tulada", "Merdeka atau Mati"], c: 1},
+                    {q: "Ibu kota negara Indonesia saat ini adalah...", a: ["Bandung", "Surabaya", "Jakarta", "IKN"], c: 2},
+                    {q: "Musyawarah dilakukan untuk mencapai...", a: ["Kemenangan", "Mufakat", "Kepentingan", "Perdebatan"], c: 1},
+                    {q: "Hari Lahir Pancasila diperingati setiap tanggal...", a: ["17 Agustus", "1 Juni", "1 Oktober", "10 November"], c: 1},
+                    {q: "Jumlah sila dalam Pancasila adalah...", a: ["3", "4", "5", "6"], c: 2},
+                    {q: "Menjaga kebersihan kelas adalah tugas...", a: ["Guru", "Kepala Sekolah", "Semua Siswa", "Penjaga Sekolah"], c: 2},
+                    {q: "Lagu kebangsaan Indonesia adalah...", a: ["Garuda Pancasila", "Indonesia Raya", "Maju Tak Gentar", "Padamu Negeri"], c: 1},
+                    {q: "Presiden pertama Indonesia adalah...", a: ["Soeharto", "Soekarno", "Habibie", "Gus Dur"], c: 1},
+                    {q: "Kita harus menghormati teman yang berbeda...", a: ["Nama", "Alamat", "Agama", "Usia"], c: 2},
+                    {q: "Sikap yang sesuai sila ke-2 adalah...", a: ["Berdoa", "Gotong royong", "Menolong teman", "Adil"], c: 2},
+                    {q: "Lambang negara Indonesia adalah...", a: ["Burung Elang", "Burung Garuda", "Harimau", "Banteng"], c: 1},
+                    {q: "Teks Proklamasi dibacakan di...", a: ["Istana Merdeka", "Rengasdengklok", "Jl. Pegangsaan Timur No. 56", "Monas"], c: 2},
+                    {q: "Kepala banteng adalah lambang sila ke-...", a: ["2", "3", "4", "5"], c: 2},
+                    {q: "Keadilan sosial bagi seluruh rakyat Indonesia adalah sila ke-...", a: ["2", "3", "4", "5"], c: 3},
+                    {q: "Contoh sikap gotong royong adalah...", a: ["Mengerjakan PR", "Membersihkan selokan", "Ujian", "Main game"], c: 1},
+                    {q: "Norma yang berlaku di sekolah disebut...", a: ["Adat", "Hukum", "Tata tertib", "Agama"], c: 2}
+                ],
+                "B. Inggris": [
+                    {q: "What is 'Apple' in Indonesian?", a: ["Jeruk", "Apel", "Mangga", "Nanas"], c: 1},
+                    {q: "How do you say 'Selamat Pagi'?", a: ["Good Night", "Good Morning", "Good Afternoon", "Good Evening"], c: 1},
+                    {q: "What color is a banana?", a: ["Red", "Yellow", "Green", "Blue"], c: 1},
+                    {q: "I have two ... (mata).", a: ["Ears", "Eyes", "Nose", "Mouth"], c: 1},
+                    {q: "One plus two is...", a: ["Two", "Three", "Four", "Five"], c: 1},
+                    {q: "What is the English word for 'Buku'?", a: ["Pen", "Pencil", "Book", "Eraser"], c: 2},
+                    {q: "My mother is a ... (guru).", a: ["Doctor", "Teacher", "Nurse", "Chef"], c: 1},
+                    {q: "The animal that says 'Meow' is a...", a: ["Dog", "Cat", "Cow", "Duck"], c: 1},
+                    {q: "Sunday is after...", a: ["Monday", "Friday", "Saturday", "Thursday"], c: 2},
+                    {q: "I eat with my...", a: ["Ear", "Mouth", "Eye", "Nose"], c: 1},
+                    {q: "Ten minus five is...", a: ["Four", "Five", "Six", "Seven"], c: 1},
+                    {q: "Red and yellow makes...", a: ["Orange", "Green", "Purple", "Pink"], c: 0},
+                    {q: "A large animal with a trunk is...", a: ["Giraffe", "Elephant", "Lion", "Tiger"], c: 1},
+                    {q: "Opposite of 'Big' is...", a: ["Tall", "Small", "Short", "Long"], c: 1},
+                    {q: "This is a ... (meja).", a: ["Chair", "Table", "Door", "Window"], c: 1},
+                    {q: "Where do you sleep?", a: ["Kitchen", "Bathroom", "Bedroom", "Garden"], c: 2},
+                    {q: "A person who flies a plane is a...", a: ["Driver", "Pilot", "Sailor", "Doctor"], c: 1},
+                    {q: "What is 'Susu' in English?", a: ["Tea", "Coffee", "Milk", "Water"], c: 2},
+                    {q: "How many fingers do you have on one hand?", a: ["Four", "Five", "Ten", "Two"], c: 1},
+                    {q: "Good bye means...", a: ["Halo", "Apa kabar", "Selamat tinggal", "Selamat datang"], c: 2}
+                ]
+            },
+            SMP: {
+                "Matematika": [
+                    {q: "Jika $3x + 5 = 14$, maka nilai $x$ adalah...", a: ["2", "3", "4", "5"], c: 1},
+                    {q: "Hasil dari $(-5) + 8 \\times (-2)$ adalah...", a: ["-6", "-21", "-11", "6"], c: 1},
+                    {q: "Rumus luas lingkaran adalah...", a: ["$\\pi r^2$", "$2 \\pi r$", "$\\frac{1}{2} a t$", "$p \\times l$"], c: 0},
+                    {q: "Banyaknya himpunan bagian dari $A = \\{1, 2, 3\\}$ adalah...", a: ["3", "6", "8", "9"], c: 2},
+                    {q: "Akar dari 144 adalah...", a: ["10", "11", "12", "14"], c: 2},
+                    {q: "Sudut penyiku dari $30^{\\circ}$ adalah...", a: ["30", "60", "90", "150"], c: 1},
+                    {q: "Jika $f(x) = 2x + 3$, maka $f(5)$ adalah...", a: ["10", "13", "15", "8"], c: 1},
+                    {q: "Gradien garis $y = 3x + 4$ adalah...", a: ["3", "4", "-3", "-4"], c: 0},
+                    {q: "Volume kubus dengan rusuk 4 cm adalah...", a: ["16", "32", "64", "48"], c: 2},
+                    {q: "Nilai rata-rata dari 5, 6, 7, 8, 9 adalah...", a: ["6", "7", "8", "7,5"], c: 1},
+                    {q: "Bentuk sederhana dari $2(x+3)$ adalah...", a: ["2x+3", "2x+6", "x+6", "2x+2"], c: 1},
+                    {q: "Himpunan bilangan prima genap adalah...", a: ["{ }", "{2}", "{2, 4}", "{1, 2}"], c: 1},
+                    {q: "Pythagoras: Jika sisi tegak 3 dan 4, maka sisi miringnya...", a: ["5", "6", "7", "10"], c: 0},
+                    {q: "Median dari data 2, 4, 6, 8, 10 adalah...", a: ["4", "6", "8", "5"], c: 1},
+                    {q: "Hasil dari $10^0$ adalah...", a: ["0", "1", "10", "Tidak ada"], c: 1},
+                    {q: "Berapa banyak sisi pada prisma segitiga?", a: ["3", "4", "5", "6"], c: 2},
+                    {q: "Hasil dari $1/2 + 1/4$ adalah...", a: ["1/6", "2/6", "3/4", "1/4"], c: 2},
+                    {q: "Persamaan garis lurus memiliki bentuk umum...", a: ["$y=ax^2+b$", "$y=mx+c$", "$ax+by^2=c$", "$x=y^2$"], c: 1},
+                    {q: "Faktor dari $x^2 - 4$ adalah...", a: ["(x-2)(x-2)", "(x+2)(x-2)", "(x+4)(x-1)", "(x-4)(x+4)"], c: 1},
+                    {q: "Jumlah sudut dalam sebuah segitiga adalah...", a: ["90", "180", "270", "360"], c: 1}
+                ],
+                "B. Indonesia": [
+                    {q: "Ide pokok dalam sebuah paragraf biasanya terdapat pada kalimat...", a: ["Penjelas", "Utama", "Terakhir", "Kedua"], c: 1},
+                    {q: "Majas yang membandingkan benda mati seolah-olah hidup disebut...", a: ["Hiperbola", "Metafora", "Personifikasi", "Litotes"], c: 2},
+                    {q: "Teks yang berisi langkah-langkah melakukan sesuatu disebut teks...", a: ["Eksplanasi", "Deskripsi", "Prosedur", "Narasi"], c: 2},
+                    {q: "Sinonim dari kata 'Efisien' adalah...", a: ["Boros", "Hemat", "Tepat guna", "Cepat"], c: 2},
+                    {q: "Kalimat yang mengandung opini adalah...", a: ["Ibu kota RI adalah Jakarta", "Gunung Merapi ada di Jawa", "Makanan itu sangat lezat", "Air mendidih pada 100 derajat"], c: 2},
+                    {q: "Tokoh lawan dalam cerita disebut...", a: ["Protagonis", "Antagonis", "Tritagonis", "Figuran"], c: 1},
+                    {q: "Latar dalam cerita meliputi tempat, waktu, dan...", a: ["Suasana", "Tokoh", "Alur", "Amanat"], c: 0},
+                    {q: "Kata penghubung disebut juga...", a: ["Adjektiva", "Konjungsi", "Nomina", "Verba"], c: 1},
+                    {q: "Ciri teks eksplanasi adalah menjelaskan...", a: ["Urutan kejadian", "Proses sebab-akibat", "Ciri fisik benda", "Tokoh fiktif"], c: 1},
+                    {q: "Bagian awal teks ulasan disebut...", a: ["Evaluasi", "Orientasi", "Tafsiran", "Rangkuman"], c: 1},
+                    {q: "Kalimat pasif ditandai dengan awalan...", a: ["Me-", "Ber-", "Di-", "Ke-"], c: 2},
+                    {q: "Kamus Besar Bahasa Indonesia disingkat...", a: ["KBBI", "PUEBI", "EYD", "Kamus RI"], c: 0},
+                    {q: "Puisi yang tidak terikat rima disebut puisi...", a: ["Lama", "Baru/Bebas", "Pantun", "Syair"], c: 1},
+                    {q: "Unsur intrinsik cerita yang merupakan pesan moral adalah...", a: ["Tema", "Alur", "Amanat", "Latar"], c: 2},
+                    {q: "Daftar pustaka diletakkan di bagian ... buku.", a: ["Depan", "Tengah", "Belakang", "Samping"], c: 2},
+                    {q: "Antonim dari kata 'Modern' adalah...", a: ["Canggih", "Baru", "Tradisional", "Kuno"], c: 2},
+                    {q: "Kalimat efektif harus memenuhi syarat...", a: ["Panjang", "Logis dan hemat kata", "Menggunakan kiasan", "Banyak kata asing"], c: 1},
+                    {q: "Iklan bertujuan untuk...", a: ["Menghibur", "Membujuk/Mempromosikan", "Memberi berita", "Menjelaskan teori"], c: 1},
+                    {q: "Buku fiksi adalah buku yang berisi...", a: ["Kenyataan", "Khayalan/Imajinasi", "Data ilmiah", "Berita"], c: 1},
+                    {q: "Intonasi dalam membaca puisi berkaitan dengan...", a: ["Gerak tubuh", "Ketepatan nada", "Ekspresi wajah", "Pakaian"], c: 1}
+                ],
+                "IPA": [
+                    {q: "Satuan SI untuk suhu adalah...", a: ["Celsius", "Fahrenheit", "Kelvin", "Reamur"], c: 2},
+                    {q: "Organel sel yang berfungsi sebagai pusat energi adalah...", a: ["Inti sel", "Mitokondria", "Ribosom", "Vakuola"], c: 1},
+                    {q: "Bunyi tidak dapat merambat melalui...", a: ["Udara", "Air", "Besi", "Ruang Hampa"], c: 3},
+                    {q: "Zat yang memiliki pH di bawah 7 bersifat...", a: ["Netral", "Asam", "Basa", "Garam"], c: 1},
+                    {q: "Bagian mata yang mengatur jumlah cahaya yang masuk adalah...", a: ["Retina", "Iris/Pupil", "Lensa", "Kornea"], c: 1},
+                    {q: "Hukum Newton I dikenal sebagai hukum...", a: ["Aksi-Reaksi", "Percepatan", "Inersia/Kelembaman", "Gravitasi"], c: 2},
+                    {q: "Lambang kimia untuk Besi adalah...", a: ["Be", "Fe", "Au", "Ag"], c: 1},
+                    {q: "Hubungan antara dua makhluk hidup yang saling menguntungkan disebut...", a: ["Komensalisme", "Mutualisme", "Parasitisme", "Predasi"], c: 1},
+                    {q: "Alat pengukur tekanan udara adalah...", a: ["Termometer", "Higrometer", "Barometer", "Anemometer"], c: 2},
+                    {q: "Penyusunan kromosom terjadi pada fase...", a: ["Interfase", "Mitosis", "Meiosis", "Metafase"], c: 3},
+                    {q: "Cermin yang digunakan pada spion motor adalah...", a: ["Datar", "Cembung", "Cekung", "Lensa"], c: 1},
+                    {q: "Satuan gaya adalah...", a: ["Joule", "Watt", "Newton", "Pascal"], c: 2},
+                    {q: "Gas yang diperlukan untuk proses pernapasan manusia adalah...", a: ["CO2", "N2", "O2", "He"], c: 2},
+                    {q: "Organ tubuh yang berfungsi menyaring darah adalah...", a: ["Hati", "Paru-paru", "Ginjal", "Jantung"], c: 2},
+                    {q: "Proses penguapan air dari daun tumbuhan disebut...", a: ["Kondensasi", "Transpirasi", "Presipitasi", "Absorpsi"], c: 1},
+                    {q: "Logam yang berwujud cair pada suhu ruang adalah...", a: ["Emas", "Perak", "Raksa", "Tembaga"], c: 2},
+                    {q: "Penyakit akibat kekurangan Vitamin C adalah...", a: ["Rakhitis", "Sariawan", "Rabun", "Anemia"], c: 1},
+                    {q: "Arus listrik mengalir dari kutub ... ke kutub ...", a: ["Negatif ke Positif", "Positif ke Negatif", "Utara ke Selatan", "Tinggi ke Rendah"], c: 1},
+                    {q: "Energi yang dimiliki benda karena kedudukannya/ketinggiannya adalah...", a: ["Kinetik", "Potensial", "Mekanik", "Listrik"], c: 1},
+                    {q: "Zat pewarna alami kunyit memberikan warna...", a: ["Merah", "Kuning", "Hijau", "Cokelat"], c: 1}
+                ],
+                "B. Inggris": [
+                    {q: "She ... to school every day.", a: ["Go", "Goes", "Going", "Gone"], c: 1},
+                    {q: "What is the synonym of 'Happy'?", a: ["Sad", "Angry", "Joyful", "Sleepy"], c: 2},
+                    {q: "I ... a student last year.", a: ["Am", "Is", "Are", "Was"], c: 3},
+                    {q: "The book is ... the table.", a: ["In", "On", "At", "By"], c: 1},
+                    {q: "Listen! The baby ...", a: ["Cries", "Is crying", "Cried", "Cry"], c: 1},
+                    {q: "Which one is a 'noun'?", a: ["Beautiful", "Run", "Library", "Slowly"], c: 2},
+                    {q: "How ... is this bag? It's 50 dollars.", a: ["Many", "Much", "Long", "Far"], c: 1},
+                    {q: "Yesterday, I ... my grandmother.", a: ["Visit", "Visited", "Visits", "Visiting"], c: 1},
+                    {q: "You should ... your teeth twice a day.", a: ["Brush", "Brushing", "Brushed", "Brushes"], c: 0},
+                    {q: "A person who cuts hair is a...", a: ["Barber", "Butcher", "Baker", "Driver"], c: 0},
+                    {q: "My sister is taller ... me.", a: ["Then", "Than", "That", "As"], c: 1},
+                    {q: "The plural of 'Child' is...", a: ["Childs", "Children", "Childes", "Childrens"], c: 1},
+                    {q: "I don't have ... money.", a: ["Some", "Any", "Many", "A"], c: 1},
+                    {q: "We ... basketball every Sunday morning.", a: ["Play", "Plays", "Playing", "Played"], c: 0},
+                    {q: "What is the opposite of 'Strong'?", a: ["Weak", "Hard", "Soft", "Brave"], c: 0},
+                    {q: "Can you help ...?", a: ["I", "My", "Me", "Mine"], c: 2},
+                    {q: "They ... lunch at the moment.", a: ["Have", "Having", "Are having", "Has"], c: 2},
+                    {q: "An elephant is ... than a cat.", a: ["Bigger", "Smaller", "Shortest", "Biggest"], c: 0},
+                    {q: "Who ... that man in the black suit?", a: ["Is", "Are", "Am", "Was"], c: 0},
+                    {q: "Thank you very much. Response: ...", a: ["You are welcome", "I am sorry", "Good luck", "No problem"], c: 0}
+                ],
+                "Pendidikan Pancasila": [
+                    {q: "Sidang pertama BPUPKI membahas tentang...", a: ["UUD", "Dasar Negara", "Presiden", "Lagu Kebangsaan"], c: 1},
+                    {q: "Norma yang bersumber dari hati nurani manusia adalah norma...", a: ["Hukum", "Agama", "Kesusilaan", "Kesopanan"], c: 2},
+                    {q: "UUD 1945 disahkan pada tanggal...", a: ["17 Agustus 1945", "18 Agustus 1945", "1 Juni 1945", "20 Mei 1908"], c: 1},
+                    {q: "Lembaga yang berwenang membuat undang-undang adalah...", a: ["MA", "MK", "DPR", "Presiden"], c: 2},
+                    {q: "Hak asasi manusia berlaku untuk...", a: ["Warga negara saja", "Setiap manusia", "Orang dewasa saja", "Pejabat saja"], c: 1},
+                    {q: "Bentuk negara Indonesia adalah...", a: ["Monarki", "Republik", "Federasi", "Kekaisaran"], c: 1},
+                    {q: "Pembukaan UUD 1945 terdiri dari ... alinea.", a: ["2", "3", "4", "5"], c: 2},
+                    {q: "Sikap menghargai pendapat orang lain dalam diskusi adalah ciri...", a: ["Otoriter", "Demokrasi", "Anarki", "Egois"], c: 1},
+                    {q: "NKRI singkatan dari...", a: ["Negara Kedaulatan Republik Indonesia", "Negara Kesatuan Republik Indonesia", "Negara Kita Republik Indonesia", "Negara Kecil Republik Indonesia"], c: 1},
+                    {q: "Warna putih pada bendera melambangkan...", a: ["Berani", "Suci", "Abadi", "Sejuk"], c: 1},
+                    {q: "Lembaga eksekutif dipimpin oleh...", a: ["Gubernur", "Ketua DPR", "Presiden", "Hakim Agung"], c: 2},
+                    {q: "Ketua BPUPKI adalah...", a: ["Dr. Radjiman Wedyodiningrat", "Ir. Soekarno", "Drs. Moh. Hatta", "Mr. Supomo"], c: 0},
+                    {q: "Semboyan 'Bhinneka Tunggal Ika' diambil dari kitab...", a: ["Sutasoma", "Negarakertagama", "Mahabharata", "Ramayana"], c: 0},
+                    {q: "Cinta tanah air disebut juga...", a: ["Egoisme", "Nasionalisme", "Individualisme", "Sosialisme"], c: 1},
+                    {q: "BPUPKI dibentuk oleh...", a: ["Belanda", "Jepang", "Sekutu", "Rakyat Indonesia"], c: 1},
+                    {q: "Pasal 29 UUD 1945 menjamin kebebasan...", a: ["Berpendapat", "Beragama", "Bekerja", "Pendidikan"], c: 1},
+                    {q: "Setiap warga negara wajib mengikuti pendidikan...", a: ["Kursus", "Formal/Dasar", "Luar negeri", "Agama saja"], c: 1},
+                    {q: "Menjaga keutuhan NKRI adalah kewajiban...", a: ["TNI saja", "Polri saja", "Seluruh warga negara", "Pemerintah saja"], c: 2},
+                    {q: "Sistem pemerintahan Indonesia adalah...", a: ["Parlementer", "Presidensial", "Absolut", "Liberal"], c: 1},
+                    {q: "Perilaku taat hukum contohnya...", a: ["Membuang sampah sembarangan", "Mematuhi rambu lalu lintas", "Bolos sekolah", "Menyontek"], c: 1}
+                ],
+                "Seni Rupa": [
+                    {q: "Teknik melukis dengan sapuan warna tipis disebut...", a: ["Plakat", "Aquarel", "Pointilis", "Blok"], c: 1},
+                    {q: "Seni membuat gambar dengan menempelkan kertas/bahan lain disebut...", a: ["Mozaik", "Kolase", "Montase", "Grafis"], c: 1},
+                    {q: "Warna yang memberikan kesan panas adalah...", a: ["Biru", "Hijau", "Merah", "Ungu"], c: 2},
+                    {q: "Garis yang memberikan kesan tenang dan statis adalah garis...", a: ["Zig-zag", "Lengkung", "Horizontal", "Diagonal"], c: 2},
+                    {q: "Perspektif adalah cara menggambar agar terlihat...", a: ["Warna-warni", "Ruang/Kedalaman", "Lucu", "Besar"], c: 1},
+                    {q: "Alat untuk memahat kayu adalah...", a: ["Palu", "Butsir", "Pahat", "Pisau"], c: 2},
+                    {q: "Seni rupa yang memiliki fungsi pakai disebut seni rupa...", a: ["Murni", "Terapan", "Abstrak", "Kontemporer"], c: 1},
+                    {q: "Tekstur yang dapat dirasakan dengan rabaan disebut tekstur...", a: ["Semu", "Nyata", "Buatan", "Alami"], c: 1},
+                    {q: "Berikut ini yang termasuk karya seni rupa murni adalah...", a: ["Kursi", "Baju", "Lukisan", "Cangkir"], c: 2},
+                    {q: "Unsur rupa yang terbentuk dari pertemuan ujung garis adalah...", a: ["Titik", "Bidang", "Bentuk", "Warna"], c: 1},
+                    {q: "Warna komplementer dari merah adalah...", a: ["Kuning", "Hijau", "Biru", "Oranye"], c: 1},
+                    {q: "Seni grafis cetak dalam menggunakan media...", a: ["Kaca", "Logam/Tembaga", "Kain", "Kertas"], c: 1},
+                    {q: "Pencipta patung disebut...", a: ["Pelukis", "Pematung", "Arsitek", "Desainer"], c: 1},
+                    {q: "Prosedur awal dalam menggambar adalah membuat...", a: ["Pewarnaan", "Sketsa", "Finishing", "Bingkai"], c: 1},
+                    {q: "Candi Borobudur termasuk karya seni rupa berupa...", a: ["Lukisan", "Arsitektur/Patung", "Kain", "Grafis"], c: 1},
+                    {q: "Media cat yang pengencernya air adalah...", a: ["Cat Minyak", "Cat Poster/Air", "Spidol", "Pensil Warna"], c: 1},
+                    {q: "Karya seni rupa yang hanya bisa dilihat dari satu arah adalah...", a: ["Patung", "Relief", "Lukisan", "Vas bunga"], c: 2},
+                    {q: "Prinsip rupa yang mengatur perbandingan ukuran adalah...", a: ["Kesatuan", "Proporsi", "Irama", "Keseimbangan"], c: 1},
+                    {q: "Alat bantu untuk membentuk tanah liat adalah...", a: ["Pahat", "Butsir", "Cutter", "Amplas"], c: 1},
+                    {q: "Warna ungu adalah campuran warna...", a: ["Merah + Kuning", "Merah + Biru", "Kuning + Biru", "Hitam + Putih"], c: 1}
+                ]
+            },
+            SMA: {
+                "Matematika": [
+                    {q: "Turunan pertama dari $f(x) = x^2$ adalah...", a: ["$x$", "$2x$", "$x^2$", "$2$"], c: 1},
+                    {q: "Nilai dari $\\log_{10} 100$ adalah...", a: ["1", "2", "3", "10"], c: 1},
+                    {q: "Hasil dari $\\int 2x \\, dx$ adalah...", a: ["$x^2 + C$", "$2x^2 + C$", "$x + C$", "$2 + C$"], c: 0},
+                    {q: "Determinan matriks $\\begin{pmatrix} 2 & 1 \\\\ 4 & 3 \\end{pmatrix}$ adalah...", a: ["2", "4", "6", "10"], c: 0},
+                    {q: "Nilai $\\sin 30^{\\circ}$ adalah...", a: ["1", "1/2", "$\\sqrt{3}/2$", "0"], c: 1},
+                    {q: "Persamaan lingkaran pusat (0,0) jari-jari 5 adalah...", a: ["$x+y=25$", "$x^2+y^2=5$", "$x^2+y^2=25$", "$x+y=5$"], c: 2},
+                    {q: "Banyak cara menyusun 3 buku berbeda adalah...", a: ["3", "6", "9", "1"], c: 1},
+                    {q: "Limit $x \\to 2$ dari $x^2$ adalah...", a: ["0", "2", "4", "Tidak ada"], c: 2},
+                    {q: "Suku ke-5 dari barisan aritmetika 2, 5, 8, ... adalah...", a: ["11", "14", "17", "20"], c: 1},
+                    {q: "Nilai $\\cos 90^{\\circ}$ adalah...", a: ["0", "1", "-1", "1/2"], c: 0},
+                    {q: "Akar-akar $x^2 - 5x + 6 = 0$ adalah...", a: ["1 dan 6", "2 dan 3", "-2 dan -3", "5 dan 1"], c: 1},
+                    {q: "Peluang muncul angka pada lempar koin adalah...", a: ["0", "1", "1/2", "1/4"], c: 2},
+                    {q: "Bentuk pangkat dari $\\sqrt{x}$ adalah...", a: ["$x^1$", "$x^2$", "$x^{1/2}$", "$x^{-1}$"], c: 2},
+                    {q: "Jika $A = \\{1, 2\\}$ dan $B = \\{3, 4\\}$, maka $A \\times B$ berisi ... elemen.", a: ["2", "4", "8", "16"], c: 1},
+                    {q: "Domain dari fungsi $f(x) = 1/x$ adalah...", a: ["Semua real", "Semua real kecuali 0", "Hanya positif", "Hanya negatif"], c: 1},
+                    {q: "Modus dari data 1, 2, 2, 3, 4 adalah...", a: ["1", "2", "3", "4"], c: 1},
+                    {q: "Vektor $\\mathbf{a} = (3, 4)$ memiliki panjang...", a: ["5", "7", "25", "1"], c: 0},
+                    {q: "Logaritma: $\\log_2 8$ sama dengan...", a: ["2", "3", "4", "8"], c: 1},
+                    {q: "Persamaan $2^x = 16$, nilai $x$ adalah...", a: ["2", "3", "4", "5"], c: 2},
+                    {q: "Jumlah 10 suku pertama $1+2+3+...$ adalah...", a: ["45", "55", "65", "100"], c: 1}
+                ],
+                "B. Indonesia": [
+                    {q: "Struktur teks negosiasi yang berisi pernyataan pembuka adalah...", a: ["Orientasi", "Permintaan", "Penawaran", "Persetujuan"], c: 0},
+                    {q: "Karya tulis ilmiah yang digunakan untuk syarat kelulusan S1 disebut...", a: ["Disertasi", "Tesis", "Skripsi", "Makalah"], c: 2},
+                    {q: "Kata serapan yang benar adalah...", a: ["Apotik", "Apotek", "Analisa", "Praktek"], c: 1},
+                    {q: "Ciri bahasa dalam teks editorial adalah...", a: ["Subjektif", "Objektif dan kritis", "Penuh kiasan", "Sangat formal"], c: 1},
+                    {q: "Tahap penyelesaian dalam alur cerita disebut...", a: ["Klimaks", "Resolusi", "Eksposisi", "Komplikasi"], c: 1},
+                    {q: "Diksi memiliki arti...", a: ["Gaya bahasa", "Pilihan kata", "Makna kata", "Struktur kalimat"], c: 1},
+                    {q: "Contoh kata baku adalah...", a: ["Izin", "Ijin", "Resiko", "Aktifitas"], c: 0},
+                    {q: "Berikut ini unsur ekstrinsik karya sastra adalah...", a: ["Latar", "Latar belakang penulis", "Tema", "Amanat"], c: 1},
+                    {q: "Majas yang menggunakan kata 'bak' atau 'laksana' adalah...", a: ["Metafora", "Simile", "Hiperbola", "Ironi"], c: 1},
+                    {q: "Tujuan teks eksposisi adalah...", a: ["Menghibur", "Meyakinkan/Memberi info", "Menceritakan masa lalu", "Mengkritik"], c: 1},
+                    {q: "Kalimat retoris adalah...", a: ["Kalimat perintah", "Kalimat tanya tanpa perlu jawaban", "Kalimat berita", "Kalimat seru"], c: 1},
+                    {q: "Larik dalam puisi disebut juga...", a: ["Bait", "Baris", "Rima", "Irama"], c: 1},
+                    {q: "Unsur intrinsik drama yang tidak ada di cerpen adalah...", a: ["Tema", "Panggung/Babak", "Tokoh", "Amanat"], c: 1},
+                    {q: "Kalimat yang menggunakan ejaan yang benar adalah...", a: ["Saya pergi ke apotik.", "Adik sedang makan.", "Dimana kamu?", "Ibu beli jeruk bali."], c: 1},
+                    {q: "Antonim dari 'Konveks' adalah...", a: ["Konkaf", "Datar", "Lurus", "Cembung"], c: 0},
+                    {q: "Ringkasan isi buku secara keseluruhan disebut...", a: ["Sinopsis", "Resensi", "Narasi", "Abstrak"], c: 1},
+                    {q: "Penulisan daftar pustaka yang benar diawali dengan...", a: ["Judul", "Nama penulis", "Tahun", "Kota"], c: 1},
+                    {q: "Sifat teks laporan hasil observasi adalah...", a: ["Fiktif", "Informatif dan objektif", "Opini", "Sangat panjang"], c: 1},
+                    {q: "Surat lamaran pekerjaan termasuk surat...", a: ["Resmi", "Pribadi", "Niaga", "Dinas"], c: 0},
+                    {q: "Fungsi kritik sastra adalah...", a: ["Menghina karya", "Menilai kelebihan & kekurangan", "Menyalin karya", "Mempromosikan"], c: 1}
+                ],
+                "Fisika": [
+                    {q: "Hukum II Newton dinyatakan dengan rumus...", a: ["$E=mc^2$", "$F=m \\cdot a$", "$V=I \\cdot R$", "$P=F/A$"], c: 1},
+                    {q: "Satuan hambatan listrik adalah...", a: ["Volt", "Ampere", "Ohm", "Watt"], c: 2},
+                    {q: "Cahaya merambat paling cepat di...", a: ["Air", "Kaca", "Udara", "Ruang hampa"], c: 3},
+                    {q: "Besaran yang memiliki arah disebut besaran...", a: ["Skalar", "Vektor", "Pokok", "Turunan"], c: 1},
+                    {q: "Energi tidak dapat diciptakan maupun dimusnahkan, ini hukum...", a: ["Gravitasi", "Termodinamika I", "Kekekalan Energi", "Pascal"], c: 2},
+                    {q: "Alat untuk mengukur kuat arus listrik adalah...", a: ["Voltmeter", "Amperemeter", "Ohmmeter", "Barometer"], c: 1},
+                    {q: "Percepatan gravitasi bumi rata-rata adalah...", a: ["9,8 m/s²", "10 m/s²", "8,9 m/s²", "1 m/s²"], c: 0},
+                    {q: "Suhu nol mutlak dalam Kelvin adalah...", a: ["0 K", "273 K", "-273 K", "100 K"], c: 0},
+                    {q: "Banyaknya getaran per detik disebut...", a: ["Periode", "Frekuensi", "Amplitudo", "Panjang gelombang"], c: 1},
+                    {q: "Lensa pada penderita miopi (rabun jauh) adalah...", a: ["Cembung", "Cekung", "Silinder", "Datar"], c: 1},
+                    {q: "Satuan daya adalah...", a: ["Joule", "Watt", "Tesla", "Weber"], c: 1},
+                    {q: "Radiasi matahari sampai ke bumi secara...", a: ["Konduksi", "Konveksi", "Radiasi", "Induksi"], c: 2},
+                    {q: "Prinsip kerja hidrolik berdasarkan hukum...", a: ["Archimedes", "Pascal", "Bernoulli", "Newton"], c: 1},
+                    {q: "Benda bermuatan positif jika...", a: ["Kelebihan elektron", "Kelebihan proton", "Kekurangan neutron", "Sama jumlahnya"], c: 1},
+                    {q: "Cepat rambat bunyi di udara sekitar...", a: ["340 m/s", "3 x 10^8 m/s", "100 m/s", "1000 m/s"], c: 0},
+                    {q: "Partikel penyusun inti atom adalah...", a: ["Elektron & Proton", "Proton & Neutron", "Elektron & Neutron", "Hanya Proton"], c: 1},
+                    {q: "Kapasitas kapasitor diukur dalam satuan...", a: ["Farad", "Henry", "Coulomb", "Volt"], c: 0},
+                    {q: "Warna cahaya dengan frekuensi terendah adalah...", a: ["Ungu", "Biru", "Hijau", "Merah"], c: 3},
+                    {q: "Efek Doppler menjelaskan perubahan...", a: ["Warna", "Frekuensi/Bunyi", "Intensitas", "Kecepatan"], c: 1},
+                    {q: "Radioaktivitas pertama kali ditemukan oleh...", a: ["Einstein", "Newton", "Henri Becquerel", "Curie"], c: 2}
+                ],
+                "Kimia": [
+                    {q: "Lambang unsur untuk emas adalah...", a: ["Ag", "Fe", "Au", "Cu"], c: 2},
+                    {q: "Nilai pH untuk larutan netral adalah...", a: ["0", "7", "14", "1"], c: 1},
+                    {q: "Partikel bermuatan negatif dalam atom adalah...", a: ["Proton", "Neutron", "Elektron", "Positron"], c: 2},
+                    {q: "Rumus kimia untuk air adalah...", a: ["$CO_2$", "$H_2O$", "$O_2$", "$NaCl$"], c: 1},
+                    {q: "Unsur paling melimpah di alam semesta adalah...", a: ["Oksigen", "Helium", "Hidrogen", "Nitrogen"], c: 2},
+                    {q: "Ikatan kimia antar unsur logam dan non-logam disebut...", a: ["Kovalen", "Ion", "Logam", "Hidrogen"], c: 1},
+                    {q: "Massa atom terpusat pada...", a: ["Kulit atom", "Inti atom", "Elektron", "Luar atom"], c: 1},
+                    {q: "Zat yang mempercepat reaksi kimia disebut...", a: ["Inhibitor", "Katalis", "Reaktan", "Produk"], c: 1},
+                    {q: "Wujud iodin pada suhu kamar adalah...", a: ["Gas", "Cair", "Padat", "Plasma"], c: 2},
+                    {q: "Penemu inti atom melalui percobaan lempeng emas adalah...", a: ["Dalton", "Thomson", "Rutherford", "Bohr"], c: 2},
+                    {q: "Gas yang menyebabkan efek rumah hijau adalah...", a: ["O2", "CO2", "N2", "Ar"], c: 1},
+                    {q: "Campuran homogen disebut juga...", a: ["Suspensi", "Koloid", "Larutan", "Emulsi"], c: 2},
+                    {q: "Jumlah proton dalam atom disebut...", a: ["Nomor massa", "Nomor atom", "Isotop", "Valensi"], c: 1},
+                    {q: "Asam lambung mengandung senyawa...", a: ["H2SO4", "HCl", "NaOH", "CH3COOH"], c: 1},
+                    {q: "Karat besi memiliki rumus...", a: ["FeO", "Fe2O3.nH2O", "FeCl3", "FeS"], c: 1},
+                    {q: "Sifat koligatif larutan bergantung pada...", a: ["Jenis zat", "Jumlah partikel", "Warna zat", "Bau zat"], c: 1},
+                    {q: "Hukum kekekalan massa dikemukakan oleh...", a: ["Lavoisier", "Proust", "Dalton", "Avogadro"], c: 0},
+                    {q: "Bahan aktif dalam pemutih pakaian adalah...", a: ["NaCl", "NaClO", "HCl", "NaOH"], c: 1},
+                    {q: "Alkana memiliki rumus umum...", a: ["CnH2n", "CnH2n+2", "CnH2n-2", "CnHn"], c: 1},
+                    {q: "Unsur golongan VIIA disebut golongan...", a: ["Alkali", "Halogen", "Gas mulia", "Khalkogen"], c: 1}
+                ],
+                "Sejarah": [
+                    {q: "Kapan teks Proklamasi Kemerdekaan Indonesia dibacakan?", a: ["17 Agustus 1944", "17 Agustus 1945", "18 Agustus 1945", "1 Juni 1945"], c: 1},
+                    {q: "Siapa pengetik teks proklamasi?", a: ["Sayuti Melik", "Sukarni", "B.M. Diah", "Wikana"], c: 0},
+                    {q: "VOC dibentuk oleh negara...", a: ["Inggris", "Belanda", "Portugis", "Spanyol"], c: 1},
+                    {q: "Kerajaan Hindu tertua di Indonesia adalah...", a: ["Majapahit", "Tarumanegara", "Kutai", "Sriwijaya"], c: 2},
+                    {q: "Pencetus Politik Etis adalah...", a: ["Van den Bosch", "Van Deventer", "Douwes Dekker", "Daendels"], c: 1},
+                    {q: "Perang Diponegoro terjadi pada tahun...", a: ["1825-1830", "1945-1949", "1800-1810", "1900-1905"], c: 0},
+                    {q: "Isi Sumpah Pemuda adalah satu nusa, satu bangsa, dan...", a: ["Satu bendera", "Satu bahasa", "Satu lagu", "Satu nasib"], c: 1},
+                    {q: "Organisasi pergerakan nasional pertama adalah...", a: ["Sarekat Islam", "Budi Utomo", "Indische Partij", "PNI"], c: 1},
+                    {q: "Gajah Mada adalah patih terkenal dari kerajaan...", a: ["Singasari", "Majapahit", "Kediri", "Demak"], c: 1},
+                    {q: "Sebab khusus Perang Dunia I adalah pembunuhan...", a: ["Hitler", "Franz Ferdinand", "Napoleon", "Mussolini"], c: 1},
+                    {q: "Jepang menyerah tanpa syarat kepada sekutu setelah bom atom di...", a: ["Tokyo", "Kyoto", "Hiroshima & Nagasaki", "Osaka"], c: 2},
+                    {q: "Konferensi Meja Bundar (KMB) dilaksanakan di kota...", a: ["Jakarta", "Yogyakarta", "Den Haag", "London"], c: 2},
+                    {q: "Tujuan utama kedatangan bangsa Barat (3G) adalah...", a: ["Gold, Glory, Gospel", "Game, Gold, Great", "God, Good, Gold", "Gift, Glory, Gospel"], c: 0},
+                    {q: "Ibu kota RI pernah dipindahkan ke ... pada 1946.", a: ["Bandung", "Yogyakarta", "Bukittinggi", "Surabaya"], c: 1},
+                    {q: "Sultan Ageng Tirtayasa berasal dari kesultanan...", a: ["Banten", "Mataram", "Aceh", "Ternate"], c: 0},
+                    {q: "Peristiwa Rengasdengklok bertujuan untuk...", a: ["Menyusun teks", "Mendesak Proklamasi", "Melawan Jepang", "Menyerah"], c: 1},
+                    {q: "Penemu benua Amerika adalah...", a: ["Magelhaens", "Columbus", "Vasco da Gama", "Marco Polo"], c: 1},
+                    {q: "Penyusun teks Proklamasi adalah Soekarno, Hatta, dan...", a: ["Sayuti Melik", "Ahmad Soebardjo", "Radjiman", "Sjahrir"], c: 1},
+                    {q: "Kerajaan Islam pertama di Jawa adalah...", a: ["Demak", "Banten", "Cirebon", "Mataram"], c: 0},
+                    {q: "Hari Kebangkitan Nasional diperingati setiap 20 Mei, sesuai kelahiran...", a: ["PNI", "Budi Utomo", "SI", "Taman Siswa"], c: 1}
+                ],
+                "B. Inggris": [
+                    {q: "If I ... rich, I would buy a car.", a: ["Am", "Is", "Was", "Were"], c: 3},
+                    {q: "The movie ... by millions of people last year.", a: ["Watch", "Watched", "Was watched", "Is watching"], c: 2},
+                    {q: "He has been living here ... 2010.", a: ["For", "Since", "In", "Until"], c: 1},
+                    {q: "I suggest that she ... more often.", a: ["Study", "Studies", "Studying", "To study"], c: 0},
+                    {q: "By next month, I ... my project.", a: ["Will finish", "Will have finished", "Finished", "Finish"], c: 1},
+                    {q: "The man ... car was stolen is my uncle.", a: ["Who", "Whom", "Whose", "Which"], c: 2},
+                    {q: "I am looking forward to ... you.", a: ["See", "Seeing", "Seen", "Saw"], c: 1},
+                    {q: "Neither my brother nor I ... going to the party.", a: ["Is", "Am", "Are", "Were"], c: 1},
+                    {q: "Despite ... hard, he failed the exam.", a: ["Study", "Studying", "He studied", "Studied"], c: 1},
+                    {q: "It's time you ... home.", a: ["Go", "Went", "Going", "To go"], c: 1},
+                    {q: "What is the synonym of 'Abundant'?", a: ["Lacking", "Plentiful", "Rare", "Scary"], c: 1},
+                    {q: "Hardly ... the office when it started to rain.", a: ["I left", "Had I left", "I had left", "Leaving"], c: 1},
+                    {q: "Unless it ..., we will go out.", a: ["Rain", "Rains", "Is raining", "Rained"], c: 1},
+                    {q: "I wish I ... more money now.", a: ["Have", "Has", "Had", "Having"], c: 2},
+                    {q: "You ... better see a doctor.", a: ["Had", "Would", "Should", "Could"], c: 0},
+                    {q: "The weather is ... hot to go outside.", a: ["Very", "Too", "So", "Enough"], c: 1},
+                    {q: "Identify the antonym of 'Fragile'.", a: ["Strong", "Weak", "Delicate", "Breakable"], c: 0},
+                    {q: "She is capable ... handling this task.", a: ["To", "In", "Of", "At"], c: 2},
+                    {q: "Would you mind ... the window?", a: ["Open", "Opening", "To open", "Opened"], c: 1},
+                    {q: "Which one is a 'compound sentence'?", a: ["I like tea.", "I like tea and coffee.", "I like tea, but he likes coffee.", "Tea is good."], c: 2}
+                ]
+            }
+        };
+
+        const HERO_MAPPING = {
+            "Matematika": { hero: "Gusion", img: "https://i.imgur.com/bsBwo5M.jpeg" },
+            "B. Indonesia": { hero: "Alucard", img: "https://i.imgur.com/2tGCvwq.jpeg" },
+            "IPAS": { hero: "Edith", img: "https://i.imgur.com/GSe5nDU.jpeg" },
+            "IPA": { hero: "Edith", img: "https://i.imgur.com/GSe5nDU.jpeg" },
+            "Fisika": { hero: "Edith", img: "https://i.imgur.com/GSe5nDU.jpeg" },
+            "Kimia": { hero: "Angela", img: "https://i.imgur.com/WJ31qiq.jpeg" },
+            "Sejarah": { hero: "Gatotkaca", img: "https://i.imgur.com/L5CXFoH.jpeg" },
+            "Pendidikan Pancasila": { hero: "Tigreal", img: "https://i.imgur.com/L5CXFoH.jpeg" },
+            "Seni Rupa": { hero: "Odette", img: "https://i.imgur.com/WJ31qiq.jpeg" },
+            "B. Inggris": { hero: "Miya", img: "https://i.imgur.com/05DrsOd.jpeg" }
+        };
+
+        const SUBJECT_NAMES = {
+            SD: ["Matematika", "B. Indonesia", "IPAS", "Seni Rupa", "Pendidikan Pancasila", "B. Inggris"],
+            SMP: ["Matematika", "B. Indonesia", "IPA", "B. Inggris", "Pendidikan Pancasila", "Seni Rupa"],
+            SMA: ["Matematika", "B. Indonesia", "Fisika", "Kimia", "Sejarah", "B. Inggris"]
+        };
+
+        // Game State
+        let state = {
+            playerName: "Player",
+            level: "SD",
+            subject: "",
+            difficulty: "mudah",
+            questions: [],
+            qIdx: 0,
+            score: 0,
+            lives: 3,
+            timer: null,
+            isAnswering: false,
+            musicPlaying: false,
+            user: null
+        };
+
+        // UI Helpers
+        window.switchScreen = (hide, show) => {
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            if (show) document.getElementById(show).classList.remove('hidden');
+        };
+
+        window.toggleMusic = () => {
+            const bgMusic = document.getElementById('bg-music');
+            if (state.musicPlaying) { 
+                bgMusic.pause(); 
+                document.getElementById('music-icon').innerText = '🔇'; 
+            } else { 
+                bgMusic.play().catch(() => {}); 
+                document.getElementById('music-icon').innerText = '🎵'; 
+            }
+            state.musicPlaying = !state.musicPlaying;
+        };
+
+        window.showNameInput = () => { 
+            if (!state.musicPlaying) toggleMusic(); 
+            switchScreen('start-menu', 'name-screen'); 
+        };
+
+        window.confirmName = () => {
+            const name = document.getElementById('player-name-input').value.trim();
+            if (name.length < 2) return;
+            state.playerName = name;
+            switchScreen('name-screen', 'level-screen');
+        };
+
+        window.selectLevel = (lvl) => { state.level = lvl; showHeroSelection(); };
+
+        window.showHeroSelection = () => {
+            switchScreen(null, 'hero-screen');
+            document.getElementById('level-tag-display').innerText = `JENJANG: ${state.level}`;
+            const list = document.getElementById('hero-list');
+            const subjects = SUBJECT_NAMES[state.level] || [];
+            
+            list.innerHTML = subjects.map((sub) => {
+                const h = HERO_MAPPING[sub] || { hero: "Hero", img: "https://via.placeholder.com/150" };
+                return `
+                    <div class="hero-card text-center" onclick="selectHero('${sub}', this)">
+                        <img src="${h.img}" class="w-full aspect-square object-cover" onerror="this.src='https://via.placeholder.com/150'">
+                        <div class="p-2 bg-black/90 border-t border-gold/40">
+                            <div class="text-[10px] text-yellow-500 font-bold uppercase">${sub}</div>
+                            <div class="text-[8px] text-white/50 uppercase">${h.hero}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('hero-confirm-btn').classList.add('hidden');
+        };
+
+        window.selectHero = (sub, el) => {
+            state.subject = sub;
+            document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            document.getElementById('hero-confirm-btn').classList.remove('hidden');
+        };
+
+        window.showDifficulty = () => switchScreen('hero-screen', 'difficulty-screen');
+        
+        window.selectDiff = (val, el) => {
+            state.difficulty = val;
+            document.querySelectorAll('#difficulty-screen .btn-ml').forEach(b => b.classList.add('btn-secondary'));
+            el.classList.remove('btn-secondary');
+            document.getElementById('diff-confirm-btn').classList.remove('hidden');
+        };
+
+        const DIFF_SETTINGS = { mudah: 250, sedang: 150, sukar: 80 };
+
+        window.prepareGame = () => {
+            const pool = QUESTION_BANK[state.level][state.subject] || [];
+            if (pool.length === 0) {
+                alert("Soal belum tersedia untuk kategori ini.");
+                return;
+            }
+            // Shuffle and take only 20 or all available
+            state.questions = [...pool].sort(() => Math.random() - 0.5).slice(0, 20);
+            state.qIdx = 0; state.score = 0; state.lives = 3;
+            switchScreen(null, 'arena');
+            loadQuestion();
+        };
+
+        function loadQuestion() {
+            if (state.lives <= 0) return endGame();
+            if (state.qIdx >= state.questions.length) return endGame(true);
+
+            state.isAnswering = false;
+            const q = state.questions[state.qIdx];
+            
+            document.getElementById('question-text').innerHTML = q.q;
+            document.getElementById('player-tag').innerText = `PLAYER: ${state.playerName.toUpperCase()}`;
+            document.getElementById('info-header').innerText = `${state.level} • ${state.subject} • ${state.qIdx + 1}/${state.questions.length}`;
+            document.getElementById('lives-header').innerText = "❤️".repeat(state.lives);
+            document.getElementById('score-display').innerText = state.score;
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = "";
+            q.a.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = "btn-ml !bg-black/80 !border-white/10 hover:!border-gold";
+                btn.innerHTML = opt;
+                btn.onclick = () => checkAnswer(i === q.c, btn);
+                container.appendChild(btn);
+            });
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(state.timer);
+            let time = 100;
+            const bar = document.getElementById('timer-progress');
+            state.timer = setInterval(() => {
+                if (state.isAnswering) return;
+                time -= 1;
+                bar.style.width = time + "%";
+                if (time <= 0) { clearInterval(state.timer); handleWrong(); }
+            }, DIFF_SETTINGS[state.difficulty]);
+        }
+
+        function checkAnswer(isCorrect, btn) {
+            if (state.isAnswering) return;
+            state.isAnswering = true;
+            clearInterval(state.timer);
+            if (isCorrect) {
+                btn.classList.add('btn-correct');
+                state.score += (state.difficulty === 'sukar' ? 200 : (state.difficulty === 'sedang' ? 150 : 100));
+                setTimeout(next, 800);
+            } else {
+                btn.classList.add('btn-wrong');
+                handleWrong();
+            }
+        }
+
+        function handleWrong() {
+            state.lives--;
+            setTimeout(() => { if (state.lives <= 0) endGame(); else next(); }, 1000);
+        }
+
+        function next() { state.qIdx++; loadQuestion(); }
+
+        async function endGame(win = false) {
+            switchScreen('arena', 'game-over');
+            document.getElementById('final-score').innerText = state.score;
+            document.getElementById('result-status').innerText = win ? "VICTORY" : "DEFEAT";
+            document.getElementById('result-status').style.color = win ? "var(--ml-cyan)" : "var(--ml-red)";
+
+            if (state.user && state.score > 0) {
+                try {
+                    const leaderboardRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
+                    await setDoc(leaderboardRef, {
+                        uid: state.user.uid,
+                        name: state.playerName,
+                        score: state.score,
+                        level: state.level,
+                        subject: state.subject,
+                        timestamp: Date.now()
+                    });
+                } catch (error) {
+                    console.error("Gagal menyimpan skor:", error);
+                }
+            }
+        }
+
+        window.showLeaderboard = async () => {
+            switchScreen('start-menu', 'leaderboard-screen');
+            const content = document.getElementById('leaderboard-content');
+            content.innerHTML = '<p class="text-center py-4 text-yellow-500 animate-pulse">MEMUAT DATA...</p>';
+            
+            if (!state.user) return;
+
+            try {
+                const leaderboardCol = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
+                const snap = await getDocs(query(leaderboardCol, limit(50)));
+                
+                let scores = [];
+                snap.forEach(doc => scores.push(doc.data()));
+                scores.sort((a, b) => b.score - a.score);
+
+                content.innerHTML = scores.length ? scores.map((s, i) => `
+                    <div class="flex justify-between p-3 border-b border-white/10 bg-black/40 mb-1 rounded">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-bold text-yellow-500">#${i+1} ${s.name}</span>
+                            <span class="text-[9px] text-gray-400">${s.level} - ${s.subject}</span>
+                        </div>
+                        <span class="text-xl text-white font-bold ml-font self-center">${s.score}</span>
+                    </div>
+                `).join('') : '<p class="text-center text-gray-500">Belum ada legenda.</p>';
+            } catch (error) {
+                console.error("Gagal memuat leaderboard:", error);
+                content.innerHTML = '<p class="text-center text-red-500">Terjadi kesalahan jaringan.</p>';
+            }
+        };
+
+        window.backToMenu = () => switchScreen(null, 'start-menu');
+        window.quitGame = () => { clearInterval(state.timer); backToMenu(); };
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Gagal otentikasi:", error);
+            }
+        };
+
+        onAuthStateChanged(auth, (u) => { state.user = u; });
+        initAuth();
+    </script>
+</body>
+</html>
